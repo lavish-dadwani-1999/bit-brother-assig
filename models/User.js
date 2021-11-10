@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
-const {sign} = require("jsonwebtoken")
+const {sign} = require("jsonwebtoken");
+const { hash } = require('bcryptjs');
+
 const Schema = mongoose.Schema;
 
 const UserSchema = new Schema(
@@ -17,7 +19,6 @@ UserSchema.statics.findUserByToken = async (token)=>{
     const user = await User.findOne({token:token})
     if(!user) throw new Error("invalid Credentials")
      await user.save()
-     console.log(user)
      return user
   }catch(err){
     err.name = 'Ststic Error';
@@ -39,6 +40,20 @@ UserSchema.methods.genrateToken = async function () {
     console.log(err);
   }
 }
+
+UserSchema.pre("save", async function (next) {
+  const user = this;
+  try {
+    if (user.isModified("password")) {
+      const hashPassword = await hash(user.password, 10);
+      user.password = hashPassword;
+      next();
+    }
+  } catch (err) {
+    console.log(err.message);
+    next(err);
+  }
+});
 
 const User = mongoose.model('user', UserSchema);
 
